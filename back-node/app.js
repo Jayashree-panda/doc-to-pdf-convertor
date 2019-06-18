@@ -35,7 +35,7 @@ app.use(cors());
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
-app.post('/upload', upload.single('file'), (req, res, next) => {
+app.post('/upload', upload.single('file'), async (req, res, next) => {
   const path = req.file.path
   var convert = new cloudConvert('PYYOR3eqGkVov6yfi7LIWZGleXIL7nUbMlOkGqNxTKwwRNx9k08ZSdzctSKWQqDr')
 
@@ -44,15 +44,15 @@ app.post('/upload', upload.single('file'), (req, res, next) => {
   convert.createProcess({
     "inputformat": "docx",
     "outputformat": "pdf"
-  }, (process) => {
+  }, (err, process) => {
     console.log(process)
     process.start({
-      "wait": true,
       "input": "upload"
     })
     process.upload(fs.createReadStream(path))
-    process.wait(callback)
-    console.log(process.data.message)
+    process.refresh()
+    process.pipe(fs.createWriteStream('outputfile.pdf')) //check output method, this doesn' work
+
   })
 })
 
