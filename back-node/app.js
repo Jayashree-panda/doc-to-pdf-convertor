@@ -3,12 +3,20 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var fileUpload=require('express-fileupload');
 var cors=require('cors')
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-//var multer=require('multer')
-//var fs=require('fs-extra')
+var multer = require('multer')
+var storage = multer.diskStorage({
+  destination: './public/uploads',
+  filename: (req, file, cb) => {
+    cb(null, file.originalname)
+  }
+})
+var upload = multer({
+  storage: storage
+})
+
 var cloudConvert=require('cloudconvert')
 var fs=require('fs')
 var app = express();
@@ -23,64 +31,31 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
-app.use(fileUpload());
-//app.use(busboy())
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
+app.post('/upload', upload.single('file'), (req, res, next) => {
+  const path = req.file.path
+  var convert = new cloudConvert('PYYOR3eqGkVov6yfi7LIWZGleXIL7nUbMlOkGqNxTKwwRNx9k08ZSdzctSKWQqDr')
 
-// var Storage = multer.diskStorage({
-//   destination: function(req, file, callback) {
-//       callback(null, "./public/docFiles");
-//   },
-//   filename: function(req, file, callback) {
-//       callback(null, file.fieldname + "_" + Date.now() + "_" + file.originalname);
-//   }
-// });
+  console.log(convert)
 
-// var impqwe = multer({
-//   storage: Storage
-// }).array("imgUploader", 3);
-// var storage=multer.diskStorage({
-//   destination:(req,file,cb)=>{
-//     cb(null,'/public/docFiles')
-//   },
-//   filename:(req,file,cb)=>{
-//     cb(null,file.fieldname+'-'+Date.now())
-//   }
-// })
+  convert.createProcess({
+    "inputformat": "docx",
+    "outputformat": "pdf"
+  }, (process) => {
+    console.log(process)
+    process.start({
+      "wait": true,
+      "input": "upload"
+    })
+    process.upload(fs.createReadStream(path))
+    process.wait(callback)
+    console.log(process.data.message)
+  })
+})
 
-// var upload=multer({storage:storage})
-app.post('/upload',(req,res,next)=>{
-  const file=req.files.file
-  console.log(file)
-  // console.log("req in node"+req)
-  // let docFile=req.files.file;
-  // //var busboy = new Busboy();
-  // // req.busboy.on('file',(fieldname,file,filename)=>{
-  // //   console.log("hi")
-  // //   console.log("filename"+filename)
-  // // })
- file.mv(`${__dirname}/public/docFiles/${file.name}`)
- var cloudconvert=new cloudConvert('PYYOR3eqGkVov6yfi7LIWZGleXIL7nUbMlOkGqNxTKwwRNx9k08ZSdzctSKWQqDr')
- fs.createReadStream('${__dirname}/public/docFiles/${file.name}')
- .pipe(cloudconvert.convert({
-   "inputformat":"doc",
-   "outputformat":"pdf",
-   "input":"upload"
- }))
- .pipe(fs.createWriteStream('${__dirname}/public/docFiles/${file.name}.pdf'))
- console.log("hi")
-  // res.send("success")
-  // console.log(req.files.file)
-  // impqwe(req, res, function(err) {
-  //   if (err) {
-  //       return res.end("Something went wrong!");
-  //   }
-  //   return res.end("File uploaded sucessfully!.");
-
-});
-// catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
